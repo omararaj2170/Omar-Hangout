@@ -1,0 +1,575 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<title>Hangout — Stay connected</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --green:#087f5b;
+  --green-dark:#056448;
+  --green-light:#e8f7f0;
+  --ink:#17231e;
+  --muted:#89948e;
+  --line:#edf1ee;
+  --surface:#f7faf8;
+  --white:#fff;
+  --shadow:0 14px 45px rgba(22,55,39,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+#authScreen{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;background:#fff}
+.auth-art{background:linear-gradient(145deg,#087f5b,#064d3b);color:white;padding:60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.auth-art:before,.auth-art:after{content:"";position:absolute;border:1px solid #ffffff20;border-radius:50%;width:420px;height:420px;right:-130px;top:15%}
+.auth-art:after{width:620px;height:620px;right:-230px;top:4%}
+.brand{display:flex;align-items:center;gap:12px;font-weight:850;font-size:23px;letter-spacing:-.7px;z-index:1}
+.brand-mark{width:42px;height:42px;border-radius:14px;background:#ffffff20;display:grid;place-items:center;font-size:22px}
+.art-copy{z-index:1;max-width:470px}
+.art-copy h1{font-size:clamp(38px,5vw,66px);line-height:1.04;letter-spacing:-3px;margin:0 0 18px}
+.art-copy p{font-size:16px;line-height:1.8;color:#d5eee4}
+.art-foot{font-size:12px;color:#c4e5d6;z-index:1}
+.auth-panel{display:grid;place-items:center;padding:35px}
+.auth-box{width:min(390px,100%)}
+.auth-box h2{font-size:31px;letter-spacing:-1.2px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:14px;margin:0 0 30px}
+.field{display:grid;gap:8px;margin:16px 0}
+.field label{font-size:12px;font-weight:750;color:#53635b}
+.field input,.composer input,.searchbox input{width:100%;border:1px solid #e6ece8;background:#fbfdfc;border-radius:13px;padding:14px 15px;outline:none;color:var(--ink);transition:.2s}
+.field input:focus,.composer input:focus,.searchbox input:focus{border-color:#61b99a;box-shadow:0 0 0 4px #087f5b12}
+.primary{border:0;border-radius:13px;background:var(--green);color:#fff;padding:14px 18px;font-weight:750;transition:.2s}
+.primary:hover{background:var(--green-dark);transform:translateY(-1px)}
+.full{width:100%;margin-top:10px}
+.text-button{border:0;background:none;color:var(--green);font-weight:750;padding:8px}
+.auth-switch{text-align:center;color:var(--muted);font-size:13px;margin-top:20px}
+.notice{font-size:13px;color:#a34d39;line-height:1.5;margin:12px 0;min-height:18px}
+#app{height:100vh;min-height:600px;display:grid;grid-template-columns:260px minmax(280px,390px) 1fr;overflow:hidden}
+.sidebar{border-right:1px solid var(--line);padding:25px 17px;display:flex;flex-direction:column;background:#fff}
+.sidebar .brand{color:var(--green);padding:0 10px 30px}
+.profile-mini{display:flex;align-items:center;gap:11px;padding:13px;background:var(--surface);border-radius:16px;margin-bottom:25px}
+.avatar{width:42px;height:42px;flex-shrink:0;border-radius:15px;background:linear-gradient(145deg,#d7f2e5,#a6d9c0);display:grid;place-items:center;color:#17694c;font-weight:850;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.profile-info{min-width:0;flex:1}
+.profile-info strong{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis}
+.profile-info small{font-size:11px;color:var(--muted)}
+.nav-label{font-size:10px;letter-spacing:1.5px;color:#a2ada6;font-weight:850;padding:0 12px;margin:10px 0}
+.nav{display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:13px;border:0;background:transparent;color:#718078;text-align:left;font-weight:700;margin:3px 0}
+.nav:hover,.nav.active{background:var(--green-light);color:var(--green)}
+.nav .ico{width:22px;text-align:center;font-size:17px}
+.sidebar-bottom{margin-top:auto}
+.logout{width:100%;border:0;background:none;text-align:left;padding:13px;color:#8c9891;font-weight:700}
+.list-panel{border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;background:#fff}
+.list-head{padding:28px 22px 18px}
+.list-head h2{font-size:25px;letter-spacing:-1px;margin:0 0 5px}
+.list-head p{font-size:12px;color:var(--muted);margin:0 0 18px}
+.searchbox{position:relative}
+.searchbox input{padding:12px 14px 12px 40px;border-radius:12px;background:#f8faf9}
+.search-icon{position:absolute;left:14px;top:10px;color:#95a39a}
+.list-content{overflow:auto;padding:5px 10px 20px}
+.section-title{font-size:10px;letter-spacing:1.4px;color:#9ba69f;font-weight:850;padding:15px 12px 8px}
+.chat-row{width:100%;display:flex;align-items:center;gap:12px;padding:13px 12px;border:0;background:white;text-align:left;border-radius:15px;transition:.18s}
+.chat-row:hover,.chat-row.selected{background:#f2f8f4}
+.chat-row .avatar{width:48px;height:48px;border-radius:17px}
+.chat-meta{min-width:0;flex:1}
+.chat-meta strong{display:block;font-size:13px;margin-bottom:5px}
+.chat-meta small{display:block;color:#8c9991;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-time{align-self:flex-start;color:#9ba69f;font-size:10px}
+.badge{background:var(--green);color:white;border-radius:20px;padding:3px 7px;font-size:10px;font-weight:800}
+.main{min-width:0;display:flex;flex-direction:column;background:#fff}
+.topbar{height:76px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.topbar-title{font-size:14px;font-weight:800}
+.top-actions{display:flex;gap:9px}
+.icon-btn{width:39px;height:39px;border:1px solid var(--line);background:white;border-radius:13px;color:#65746b;font-size:16px}
+.icon-btn:hover{background:var(--green-light);color:var(--green)}
+.welcome{flex:1;display:grid;place-items:center;padding:35px;text-align:center}
+.welcome-inner{max-width:430px}
+.welcome-logo{width:82px;height:82px;border-radius:28px;margin:0 auto 24px;display:grid;place-items:center;background:var(--green-light);color:var(--green);font-size:35px;box-shadow:0 12px 35px #087f5b12}
+.welcome h1{font-size:30px;letter-spacing:-1.2px;margin:0 0 10px}
+.welcome p{font-size:14px;line-height:1.7;color:var(--muted)}
+.chat-view{flex:1;display:flex;flex-direction:column;min-height:0}
+.chat-header{padding:14px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.chat-header .avatar{width:43px;height:43px}
+.chat-header-info{flex:1}
+.chat-header-info strong{font-size:13px}
+.chat-header-info small{display:block;color:var(--green);font-size:11px;margin-top:4px}
+.messages{flex:1;overflow:auto;padding:25px clamp(15px,5vw,65px);display:flex;flex-direction:column;gap:11px;background:linear-gradient(#fff,#fcfefd)}
+.day-label{text-align:center;color:#a3aea7;font-size:10px;font-weight:800;letter-spacing:1px;margin:12px 0}
+.message{max-width:min(72%,470px);padding:12px 15px;border-radius:17px;background:#f1f5f2;font-size:13px;line-height:1.55;overflow-wrap:anywhere;align-self:flex-start;border-bottom-left-radius:5px}
+.message.mine{align-self:flex-end;background:var(--green);color:white;border-bottom-left-radius:17px;border-bottom-right-radius:5px}
+.message time{display:block;text-align:right;font-size:9px;opacity:.62;margin-top:5px}
+.composer-wrap{padding:15px 22px 20px;border-top:1px solid var(--line)}
+.composer{display:flex;gap:10px;align-items:center}
+.composer input{border-radius:15px;background:#f7faf8;padding:14px 16px}
+.send-btn{width:47px;height:47px;border:0;border-radius:15px;background:var(--green);color:white;font-size:18px}
+.empty{padding:25px 15px;text-align:center;color:#9ba69f;font-size:12px;line-height:1.7}
+.page-content{padding:30px;overflow:auto}
+.page-content h1{font-size:27px;letter-spacing:-1px;margin:0 0 7px}
+.page-content>p{color:var(--muted);font-size:13px;margin:0 0 25px}
+.feature-card{border:1px solid var(--line);border-radius:20px;padding:22px;margin-bottom:14px;background:#fff;box-shadow:var(--shadow)}
+.feature-card h3{margin:0 0 7px;font-size:15px}
+.feature-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.7}
+.status-ring{width:55px;height:55px;border-radius:19px;padding:3px;background:linear-gradient(135deg,#0a9c69,#b1e5c8);display:grid;place-items:center}
+.status-ring span{background:white;width:100%;height:100%;border-radius:16px;display:grid;place-items:center;color:var(--green);font-weight:800}
+.user-result{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.user-result .profile-info{flex:1}
+@media(max-width:1000px){
+ #app{grid-template-columns:76px minmax(250px,340px) 1fr}
+ .sidebar{padding:20px 10px;align-items:center}
+ .sidebar .brand{padding:0 0 28px}
+ .brand-name,.profile-info,.nav-label,.nav-text,.logout span{display:none}
+ .profile-mini{padding:7px;background:white}
+ .nav{width:48px;height:48px;justify-content:center;padding:0}
+ .nav .ico{font-size:19px}
+ .logout{text-align:center}
+}
+@media(max-width:700px){
+ #authScreen{grid-template-columns:1fr}
+ .auth-art{display:none}
+ .auth-panel{min-height:100vh}
+ #app{height:100dvh;min-height:0;grid-template-columns:1fr;grid-template-rows:1fr 66px}
+ .sidebar{grid-row:2;grid-column:1;border:0;border-top:1px solid var(--line);padding:5px 8px;flex-direction:row;justify-content:space-around;align-items:center}
+ .sidebar .brand,.profile-mini,.nav-label,.sidebar-bottom{display:none}
+ .nav{width:auto;flex:1;height:54px;display:flex;flex-direction:column;gap:2px;font-size:9px;padding:5px 0;margin:0}
+ .nav .nav-text{display:block}
+ .nav .ico{font-size:17px}
+ .list-panel{display:none}
+ .main{grid-row:1;grid-column:1}
+ .topbar{height:60px;padding:0 16px}
+ .page-content{padding:22px 17px}
+ .messages{padding:20px 14px}
+ .composer-wrap{padding:12px}
+ .chat-header{padding:12px 15px}
+}
+</style>
+</head>
+<body>
+
+<section id="authScreen">
+  <div class="auth-art">
+    <div class="brand"><span class="brand-mark">✳</span> HANGOUT</div>
+    <div class="art-copy">
+      <h1>Good conversations.<br>Better connections.</h1>
+      <p>A calmer place to talk, share moments and stay close to the people who matter.</p>
+    </div>
+    <div class="art-foot">HANGOUT · YOUR SPACE TO CONNECT</div>
+  </div>
+  <div class="auth-panel">
+    <div class="auth-box">
+      <div class="brand" style="color:var(--green);margin-bottom:35px"><span class="brand-mark" style="background:var(--green-light)">✳</span> HANGOUT</div>
+      <h2 id="authTitle">Welcome back.</h2>
+      <p class="sub" id="authSub">Sign in to continue to your conversations.</p>
+      <form id="authForm">
+        <div class="field hidden" id="usernameField">
+          <label for="username">USERNAME</label>
+          <input id="username" autocomplete="username" minlength="3" maxlength="20" placeholder="Choose a username">
+        </div>
+        <div class="field">
+          <label for="email">EMAIL ADDRESS</label>
+          <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="password">PASSWORD</label>
+          <input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters">
+        </div>
+        <button class="primary full" id="authSubmit" type="submit">Sign in →</button>
+      </form>
+      <div class="notice" id="authNotice" role="status"></div>
+      <div class="auth-switch"><span id="switchText">New to Hangout?</span> <button class="text-button" id="switchMode" type="button">Create account</button></div>
+      <div class="auth-switch"><button class="text-button" id="forgotBtn" type="button">Forgot password?</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark" style="background:var(--green-light)">✳</span><span class="brand-name">HANGOUT</span></div>
+    <div class="profile-mini">
+      <div class="avatar" id="myAvatar">H</div>
+      <div class="profile-info"><strong id="myName">My profile</strong><small>● Online</small></div>
+    </div>
+    <div class="nav-label">WORKSPACE</div>
+    <button class="nav" data-page="camera"><span class="ico">◉</span><span class="nav-text">Camera</span></button>
+    <button class="nav active" data-page="chats"><span class="ico">▤</span><span class="nav-text">Chats</span></button>
+    <button class="nav" data-page="status"><span class="ico">◌</span><span class="nav-text">Status</span></button>
+    <button class="nav" data-page="calls"><span class="ico">⌕</span><span class="nav-text">Calls</span></button>
+    <div class="sidebar-bottom">
+      <div class="nav-label">ACCOUNT</div>
+      <button class="logout" id="logoutBtn">↪ <span>Log out</span></button>
+    </div>
+  </aside>
+
+  <aside class="list-panel" id="listPanel">
+    <div class="list-head">
+      <h2 id="listTitle">Messages</h2>
+      <p id="listSubtitle">Your conversations, all in one place.</p>
+      <div class="searchbox"><span class="search-icon">⌕</span><input id="chatSearch" placeholder="Search conversations..."></div>
+      <button class="primary full" id="newChatBtn" style="padding:11px">＋ New conversation</button>
+    </div>
+    <div class="list-content" id="chatList">
+      <div class="empty">Your conversations will appear here.</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topTitle">Your conversations</div>
+      <div class="top-actions">
+        <button class="icon-btn" id="topNewChat" title="New conversation">＋</button>
+        <button class="icon-btn" id="topProfile" title="Your profile">◎</button>
+      </div>
+    </div>
+
+    <div class="welcome" id="welcome">
+      <div class="welcome-inner">
+        <div class="welcome-logo">✳</div>
+        <h1>Make room for good conversations.</h1>
+        <p>Pick a conversation on the left, or start something new. Your next great chat is one message away.</p>
+        <button class="primary" id="welcomeNewChat">＋ Start a conversation</button>
+      </div>
+    </div>
+
+    <section class="chat-view hidden" id="chatView">
+      <header class="chat-header">
+        <div class="avatar" id="chatAvatar">?</div>
+        <div class="chat-header-info"><strong id="chatName">Conversation</strong><small id="chatStatus">Hangout conversation</small></div>
+        <button class="icon-btn" title="Voice calls are not connected yet" id="voiceBtn">☎</button>
+        <button class="icon-btn" title="Video calls are not connected yet" id="videoBtn">▣</button>
+      </header>
+      <div class="messages" id="messages">
+        <div class="empty">Loading messages...</div>
+      </div>
+      <form class="composer-wrap" id="messageForm">
+        <div class="composer">
+          <input id="messageInput" maxlength="4000" autocomplete="off" placeholder="Write a message..." aria-label="Write a message">
+          <button class="send-btn" type="submit" aria-label="Send message">➤</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="page-content hidden" id="otherPage"></section>
+  </main>
+</section>
+
+<script>
+/* HANGOUT CONFIGURATION */
+const SUPABASE_URL = "https://fuhsbsatmoqssmzastlb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_RuKlm5gP8INB9C8DvZygeQ_t1L6Q9-d";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const state = {
+  user:null, profile:null, mode:"login", page:"chats",
+  conversations:[], current:null, messagesChannel:null, listChannel:null
+};
+
+function escapeHTML(value="") {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function initials(name="H") {
+  return name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||"").join("").toUpperCase() || "H";
+}
+function avatarHTML(name) {
+  return `<div class="avatar">${escapeHTML(initials(name))}</div>`;
+}
+function timeLabel(date) {
+  return new Date(date).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+}
+function setNotice(message, isError=true) {
+  $("authNotice").textContent=message;
+  $("authNotice").style.color=isError?"#a34d39":"#087f5b";
+}
+function setAuthMode(mode) {
+  state.mode=mode;
+  const signup=mode==="signup";
+  $("authTitle").textContent=signup?"Create your account.":"Welcome back.";
+  $("authSub").textContent=signup?"Join Hangout and start connecting.":"Sign in to continue to your conversations.";
+  $("usernameField").classList.toggle("hidden",!signup);
+  $("username").required=signup;
+  $("authSubmit").textContent=signup?"Create account →":"Sign in →";
+  $("switchText").textContent=signup?"Already have an account?":"New to Hangout?";
+  $("switchMode").textContent=signup?"Sign in":"Create account";
+  $("forgotBtn").classList.toggle("hidden",signup);
+  setNotice("");
+}
+$("switchMode").addEventListener("click",()=>setAuthMode(state.mode==="login"?"signup":"login"));
+
+$("authForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const email=$("email").value.trim();
+  const password=$("password").value;
+  const username=$("username").value.trim().toLowerCase();
+  $("authSubmit").disabled=true;
+  $("authSubmit").textContent="Please wait...";
+  try {
+    if(state.mode==="signup") {
+      if(!/^[a-z0-9_]{3,20}$/.test(username)) throw new Error("Username must be 3–20 characters: letters, numbers or underscores.");
+      const {data,error}=await db.auth.signUp({
+        email,password,
+        options:{data:{username}}
+      });
+      if(error) throw error;
+      if(data.session) await startApp(data.user);
+      else setNotice("Account created! Check your email to confirm your account.",false);
+    } else {
+      const {data,error}=await db.auth.signInWithPassword({email,password});
+      if(error) throw error;
+      await startApp(data.user);
+    }
+  } catch(err) {setNotice(err.message || "Something went wrong.");}
+  finally {$("authSubmit").disabled=false;$("authSubmit").textContent=state.mode==="signup"?"Create account →":"Sign in →";}
+});
+
+$("forgotBtn").addEventListener("click",async()=>{
+  const email=$("email").value.trim();
+  if(!email){setNotice("Enter your email address first.");return;}
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  setNotice(error?error.message:"Password reset email sent. Check your inbox.",!!error);
+});
+
+async function startApp(user) {
+  state.user=user;
+  $("authScreen").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("myName").textContent=user.user_metadata?.username || user.email?.split("@")[0] || "Hangout user";
+  $("myAvatar").textContent=initials($("myName").textContent);
+  await loadProfile();
+  await loadConversations();
+  subscribeToConversationList();
+  showPage("chats");
+}
+
+async function loadProfile() {
+  const {data,error}=await db.from("profiles").select("*").eq("id",state.user.id).maybeSingle();
+  if(error) console.warn("Profile lookup:",error.message);
+  state.profile=data;
+  if(data?.username) {
+    $("myName").textContent=data.username;
+    $("myAvatar").textContent=initials(data.username);
+  }
+}
+
+async function loadConversations() {
+  const {data:members,error}=await db.from("conversation_members")
+    .select("conversation_id").eq("user_id",state.user.id);
+  if(error){console.error(error);return;}
+  const ids=(members||[]).map(m=>m.conversation_id);
+  if(!ids.length){state.conversations=[];renderConversationList();return;}
+  const {data:conversations,error:convError}=await db.from("conversations")
+    .select("id,created_at,created_by").in("id",ids).order("created_at",{ascending:false});
+  if(convError){console.error(convError);return;}
+  const {data:allMembers,error:memberError}=await db.from("conversation_members")
+    .select("conversation_id,user_id").in("conversation_id",ids);
+  if(memberError){console.error(memberError);return;}
+  const userIds=[...new Set((allMembers||[]).map(m=>m.user_id).filter(id=>id!==state.user.id))];
+  let profiles=[];
+  if(userIds.length){
+    const result=await db.from("profiles").select("id,username").in("id",userIds);
+    if(result.error)console.warn(result.error);
+    profiles=result.data||[];
+  }
+  state.conversations=(conversations||[]).map(c=>{
+    const other=(allMembers||[]).find(m=>m.conversation_id===c.id&&m.user_id!==state.user.id);
+    const profile=profiles.find(p=>p.id===other?.user_id);
+    return {...c,otherId:other?.user_id,otherName:profile?.username||"Hangout user",lastMessage:"Start a conversation"};
+  });
+  renderConversationList();
+  await loadLastMessages();
+}
+
+async function loadLastMessages(){
+  for(const c of state.conversations){
+    const {data}=await db.from("messages").select("content,created_at")
+      .eq("conversation_id",c.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(data){c.lastMessage=data.content;c.lastTime=data.created_at;}
+  }
+  renderConversationList();
+}
+
+function renderConversationList(){
+  const query=$("chatSearch").value.trim().toLowerCase();
+  const items=state.conversations.filter(c=>c.otherName.toLowerCase().includes(query));
+  if(!items.length){
+    $("chatList").innerHTML=`<div class="empty">${state.conversations.length?"No matching conversations.":"No chats yet. Start a conversation with someone's username."}</div>`;
+    return;
+  }
+  $("chatList").innerHTML='<div class="section-title">RECENT CONVERSATIONS</div>'+items.map(c=>`
+    <button class="chat-row ${state.current?.id===c.id?"selected":""}" data-chat="${c.id}">
+      ${avatarHTML(c.otherName)}
+      <div class="chat-meta"><strong>${escapeHTML(c.otherName)}</strong><small>${escapeHTML(c.lastMessage||"Start a conversation")}</small></div>
+      <span class="chat-time">${c.lastTime?timeLabel(c.lastTime):""}</span>
+    </button>`).join("");
+  $("chatList").querySelectorAll("[data-chat]").forEach(btn=>{
+    btn.addEventListener("click",()=>openConversation(btn.dataset.chat));
+  });
+}
+$("chatSearch").addEventListener("input",renderConversationList);
+
+async function createConversation(){
+  const username=prompt("Enter the exact username of the person you want to message:");
+  if(username===null)return;
+  const clean=username.trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,20}$/.test(clean)){alert("Enter a valid username.");return;}
+  if(clean===(state.profile?.username||"").toLowerCase()){alert("You cannot start a chat with yourself.");return;}
+  const {data:person,error:personError}=await db.from("profiles").select("id,username").eq("username",clean).maybeSingle();
+  if(personError) {alert(personError.message);return;}
+  if(!person){alert("No user found with that username.");return;}
+  const existing=state.conversations.find(c=>c.otherId===person.id);
+  if(existing){openConversation(existing.id);return;}
+  const {data:conversation,error}=await db.from("conversations")
+    .insert({created_by:state.user.id}).select().single();
+  if(error){alert(error.message);return;}
+  const {error:memberError}=await db.from("conversation_members").insert([
+    {conversation_id:conversation.id,user_id:state.user.id},
+    {conversation_id:conversation.id,user_id:person.id}
+  ]);
+  if(memberError){alert(memberError.message);return;}
+  await loadConversations();
+  openConversation(conversation.id);
+}
+$("newChatBtn").addEventListener("click",createConversation);
+$("topNewChat").addEventListener("click",createConversation);
+$("welcomeNewChat").addEventListener("click",createConversation);
+
+async function openConversation(id){
+  const c=state.conversations.find(x=>x.id===id);
+  if(!c)return;
+  state.current=c;
+  $("welcome").classList.add("hidden");
+  $("otherPage").classList.add("hidden");
+  $("chatView").classList.remove("hidden");
+  $("chatName").textContent=c.otherName;
+  $("chatAvatar").textContent=initials(c.otherName);
+  $("chatStatus").textContent="Hangout member";
+  $("topTitle").textContent=c.otherName;
+  renderConversationList();
+  await loadMessages();
+  subscribeToMessages(id);
+}
+
+async function loadMessages(){
+  if(!state.current)return;
+  $("messages").innerHTML='<div class="empty">Loading messages...</div>';
+  const {data,error}=await db.from("messages").select("*")
+    .eq("conversation_id",state.current.id).order("created_at",{ascending:true}).limit(300);
+  if(error){$("messages").innerHTML=`<div class="empty">${escapeHTML(error.message)}</div>`;return;}
+  renderMessages(data||[]);
+}
+
+function renderMessages(messages){
+  $("messages").innerHTML=messages.length?messages.map(m=>`
+    <div class="message ${m.sender_id===state.user.id?"mine":""}">
+      ${escapeHTML(m.content)}
+      <time>${timeLabel(m.created_at)}${m.sender_id===state.user.id?" · You":""}</time>
+    </div>`).join(""):'<div class="empty">This is the beginning of your conversation. Say hello! 👋</div>';
+  $("messages").scrollTop=$("messages").scrollHeight;
+}
+
+$("messageForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const content=$("messageInput").value.trim();
+  if(!content||!state.current)return;
+  $("messageInput").value="";
+  const {error}=await db.from("messages").insert({
+    conversation_id:state.current.id,
+    sender_id:state.user.id,
+    content
+  });
+  if(error){alert("Message could not be sent: "+error.message);$("messageInput").value=content;}
+});
+
+function subscribeToMessages(id){
+  if(state.messagesChannel)db.removeChannel(state.messagesChannel);
+  state.messagesChannel=db.channel("messages-"+id)
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:"conversation_id=eq."+id},payload=>{
+      const node=payload.new;
+      const existing=[...$("messages").querySelectorAll(".message")];
+      if(existing.some(el=>el.dataset?.id===node.id))return;
+      appendMessage(node);
+      loadConversations();
+    }).subscribe();
+}
+function appendMessage(m){
+  const empty=$("messages").querySelector(".empty");
+  if(empty)empty.remove();
+  const div=document.createElement("div");
+  div.className="message "+(m.sender_id===state.user.id?"mine":"");
+  div.dataset.id=m.id;
+  const content=document.createTextNode(m.content);
+  const time=document.createElement("time");
+  time.textContent=timeLabel(m.created_at)+(m.sender_id===state.user.id?" · You":"");
+  div.append(content,time);
+  $("messages").append(div);
+  $("messages").scrollTop=$("messages").scrollHeight;
+}
+
+function subscribeToConversationList(){
+  if(state.listChannel)db.removeChannel(state.listChannel);
+  state.listChannel=db.channel("conversation-members-"+state.user.id)
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"conversation_members",filter:"user_id=eq."+state.user.id},()=>loadConversations())
+    .subscribe();
+}
+
+function showPage(page){
+  state.page=page;
+  document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  $("chatView").classList.add("hidden");
+  $("welcome").classList.add("hidden");
+  $("otherPage").classList.add("hidden");
+  $("listPanel").classList.toggle("hidden",page!=="chats");
+  if(page==="chats"){
+    $("topTitle").textContent="Your conversations";
+    if(state.current){$("chatView").classList.remove("hidden");$("topTitle").textContent=state.current.otherName;}
+    else $("welcome").classList.remove("hidden");
+    return;
+  }
+  const pages={
+    camera:{
+      title:"Camera",
+      subtitle:"Capture a moment and share it with your people.",
+      cards:[["Your camera space","Camera sharing is not connected yet. This is where photo sharing will live."],["Coming next","Add photo uploads and image sharing through Supabase Storage."]]
+    },
+    status:{
+      title:"Status",
+      subtitle:"Little updates from the people you know.",
+      cards:[["Your status","Status updates are not connected yet."],["Coming next","We'll add temporary photo and text updates with privacy controls."]]
+    },
+    calls:{
+      title:"Calls",
+      subtitle:"Stay close, wherever you are.",
+      cards:[["Voice calls","The call button is currently a preview. Real voice calling needs WebRTC signaling and a TURN service."],["Video calls","Video calling is not connected yet. It needs camera permissions, WebRTC and network relay configuration."]]
+    }
+  };
+  const p=pages[page];
+  $("topTitle").textContent=p.title;
+  $("otherPage").innerHTML=`<h1>${p.title}</h1><p>${p.subtitle}</p>`+p.cards.map(c=>`<div class="feature-card"><h3>${c[0]}</h3><p>${c[1]}</p></div>`).join("");
+  $("otherPage").classList.remove("hidden");
+}
+document.querySelectorAll(".nav").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+$("topProfile").addEventListener("click",()=>alert("Signed in as "+state.user?.email+"\nUsername: "+(state.profile?.username||"Not available")));
+$("voiceBtn").addEventListener("click",()=>alert("Voice calling is not connected yet. The interface is ready for a WebRTC calling feature."));
+$("videoBtn").addEventListener("click",()=>alert("Video calling is not connected yet. The interface is ready for a WebRTC calling feature."));
+$("logoutBtn").addEventListener("click",async()=>{
+  if(state.messagesChannel)await db.removeChannel(state.messagesChannel);
+  if(state.listChannel)await db.removeChannel(state.listChannel);
+  await db.auth.signOut();
+  location.reload();
+});
+
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){state.user=null;}
+});
+(async()=>{
+  const {data:{session}}=await db.auth.getSession();
+  if(session?.user)await startApp(session.user);
+})();
+</script>
+</body>
+</html>
